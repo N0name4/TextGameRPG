@@ -1,31 +1,34 @@
-public class Shop
+namespace TextGameRPG
 {
-    public int MaxItemNum{get; set;}
-    //public int MaxSkillNum{get; set;}
-
-    Shop(int MaxItemNum)
+    public class Shop
     {
-        this.MaxItemNum = MaxItemNum;
+        public int MaxItemNum { get; set; }
+        //public int MaxSkillNum{get; set;}
+
+        Shop(int MaxItemNum)
+        {
+            this.MaxItemNum = MaxItemNum;
+        }
+
+        public void RandomItemSet()
+        {
+
+        }
+
+        public void SellItem()
+        {
+
+        }
+
+        public void BuyItem()
+        {
+
+        }
+
+        public void EnhanceItem()
+        {
+
+        }
+
     }
-
-    public void RandomItemSet()
-    {
-
-    }
-
-    public void SellItem()
-    {
-
-    }
-
-    public void buyItem()
-    {
-
-    } 
-
-    public void EnhanceItem()
-    {
-
-    }
-
 }
