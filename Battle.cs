@@ -21,6 +21,7 @@ namespace TextGameRPG
             this.enemy = enemy;
         }
 
+        //플레이어면 아이템 적용된 스탯을, 적이면 기본 스탯을 가져온다.
         private int GetAtk(Character character){return character is Player player ? player.MaxAtk : character.Atk;}
         private int GetDef(Character character)
         {
@@ -86,6 +87,9 @@ namespace TextGameRPG
                 Console.WriteLine($"{attacker.Name}의 Ap가 부족하여 {skillName} 발동에 실패하였습니다.");
                 return;
             }
+            attacker.CurrentHp -= HpConsump;
+            attacker.CurrentMp -= MpConsump;
+            attacker.CurrentAp -= ApConsump;
 
             int dodgeP = GetDodge(target);
 
@@ -94,9 +98,9 @@ namespace TextGameRPG
                 Console.WriteLine($"{target.Name}(이)가 {skillName}(를)을 회피하였습니다.");
                 return;
             }
-            int AtkP = GetAtk(target);
-            int IntP = GetInt(target);
-            int DefP = GetDef(target);
+            int AtkP = GetAtk(attacker);
+            int IntP = GetInt(attacker);
+            int DefP = GetDef(attacker);
 
             int damage = (int)(AtkP * AtkDamage + IntP * IntDamage);
 
@@ -152,7 +156,7 @@ namespace TextGameRPG
             }
             Console.WriteLine($"{character.Name}가 집중합니다! 다음 턴까지 크리율이 2배 증가합니다.");
         }
-
+        //턴 끝날 때 가중치 초기화하는 함수
         public void endTurn()
         {
             playerCriticalBonus = 0;
@@ -161,6 +165,147 @@ namespace TextGameRPG
             enemyCriticalBonus = 0;
             enemyDodgeBonus = 0;
             enemyDefenseBonus = 0;
+        }
+
+        //전체 배틀 함수
+        public void WholeBattle()
+        {
+            Console.WriteLine($"전투 시작! {player.Name} vs {enemy.Name}");
+            int playerSpeed = GetActSpd(player);
+            int enemySpeed = GetActSpd(enemy);
+            int totalTurn = playerSpeed + enemySpeed;
+
+            while (player.CurrentHp > 0 && enemy.CurrentHp > 0)
+            {
+                bool result = rand.Next(0, totalTurn) <= playerSpeed;
+                bool firstturn = true;
+                if (result)
+                {
+                    Console.WriteLine($"선공은 {player.Name}");
+                    do
+                    {
+                        if (player.CurrentHp > 0) { PlayerTurn(); }
+                        if (enemy.CurrentHp <= 0) { break; }
+                        if(!firstturn){Console.WriteLine($"{player.Name}의 추가 턴!");}
+                        firstturn = false;
+                        Console.WriteLine();
+                    } while (rand.Next(0, totalTurn) <= playerSpeed);
+                    do
+                    {
+                        if (enemy.CurrentHp > 0) { EnemyTurn(); }
+                        if (player.CurrentHp <= 0) { break; }
+                        if (!firstturn) { Console.WriteLine($"{player.Name}의 추가 턴!"); }
+                        firstturn = false;
+                        Console.WriteLine();
+                    } while (rand.Next(0, totalTurn) <= enemySpeed);
+                }
+                else
+                {
+                    Console.WriteLine($"선공은 {enemy.Name}");
+                    do
+                    {
+                        if (enemy.CurrentHp > 0) { EnemyTurn(); }
+                        if (player.CurrentHp <= 0) { break; }
+                    } while (rand.Next(0, totalTurn) <= enemySpeed);
+                    do
+                    {
+                        if (player.CurrentHp > 0) { PlayerTurn(); }
+                        if (enemy.CurrentHp <= 0) { break; }
+                    } while (rand.Next(0, totalTurn) <= playerSpeed);
+                }
+                player.CurrentAp += (int)(player.MaxAp * 0.2);
+                endTurn();
+                Console.WriteLine();
+            }
+            EndBattle();
+
+
+        }
+
+       
+        //플레이어 턴 행동 관련 함수.
+        public void PlayerTurn()
+        {
+            while (true)
+            {
+                Console.WriteLine("1: 기본 공격  2: 방어  3: 회피  4: 집중  5: 스킬 공격  6: 적 정보 확인");
+                string choice = Console.ReadLine();
+
+                if (choice == "6")
+                {
+                    enemy.DisplayStats();
+                    continue;
+                }
+                switch (choice)
+                {
+                    case "1":
+                        BaseAttack(player, enemy);
+                        break;
+                    case "2":
+                        DefenseCommand(player);
+                        break;
+                    case "3":
+                        DodgeCommand(player);
+                        break;
+                    case "4":
+                        CriticalCommand(player);
+                        break;
+                    case "5":
+                        switch(player.Class)
+                        {
+                            case 1:
+                                skillAttack(player, enemy, "《파괴의 일격》", 0, 0, 20, 2, 0);
+                                break;
+                            case 2:
+                                skillAttack(player, enemy, "《파이어볼》", 0, 10, 0, 0, 3);
+                                break;
+                            case 3:
+                                skillAttack(player, enemy, "《그림자 찌르기》", 0, 10, 15, 2, 1);
+                                break;
+                            case 4:
+                                skillAttack(player, enemy, " 《신성》", 0, 15, 0, 1, 1);
+                                int heal = (int)(player.MaxHp * player.MaxInt / 100);
+                                player.CurrentHp += heal;
+                                break;
+                        }
+                        break;
+                }
+                break;
+            }
+        }
+        //적 행동 함수
+        public void EnemyTurn()
+        {
+            Console.WriteLine($"{enemy.Name}의 턴!");
+            if (rand.Next(1, 101) <= 65) // 65% 확률로 공격
+            {
+                BaseAttack(enemy, player);
+            }
+            else // 35% 확률로 방어
+            {
+                DefenseCommand(enemy);
+            }
+        }
+        //적이던 나던 체력이 0이되면 사실상 실행된다.
+        public void EndBattle()
+        {
+            if (player.CurrentHp <= 0)
+            {
+                Console.WriteLine("게임 오버! 플레이어가 패배하였습니다.");
+                Console.WriteLine("처음 화면으로 돌아갑니다.");
+
+                Console.ReadKey(); // 사용자가 입력할 때까지 대기
+
+                Game.RestartGame(); // 프로그램 루프를 다시 실행
+            }
+            else if(enemy.CurrentHp <= 0)   
+            {
+                enemy.DefeatEnemy(player);
+                if(rand.Next(1,101) <= enemy.ItemReward)
+                {
+                    Console.WriteLine("적에게서 아이템이 드롭됩니다!");
+                }
+            }
         }
     }
 }
